@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>المحاضرة 4 — Nmap على Kali | Sunshine T Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --card2:#1c2333;
+    --accent:#00d4aa; --accent2:#ff6b35; --purple:#8b5cf6;
+    --text:#e6edf3; --muted:#8b949e; --warn:#ffd60a; --blue:#4da3ff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif}
+  body{background:var(--bg);color:var(--text);line-height:1.9}
+  .container{max-width:1100px;margin:0 auto;padding:24px}
+
+  /* ===== Progress Bar ===== */
+  .progress-bar{display:flex;gap:8px;justify-content:center;padding:14px;flex-wrap:wrap;
+    background:#0a0e14;border-bottom:1px solid #30363d}
+  .pb{width:120px;height:6px;border-radius:6px;background:#30363d;position:relative}
+  .pb.done{background:var(--accent)}
+  .pb.current{background:linear-gradient(90deg,#39ff14,#00d4aa);box-shadow:0 0 12px #39ff14}
+  .pb span{position:absolute;top:10px;right:50%;transform:translateX(50%);font-size:.65rem;color:var(--muted);white-space:nowrap}
+
+  /* ===== Hero ===== */
+  header{background:linear-gradient(135deg,#03160c 0%,#0a2e1a 50%,#145c35 100%);
+    padding:50px 20px;text-align:center;border-bottom:3px solid #39ff14}
+  header .logo{font-size:15px;letter-spacing:2px;color:var(--accent);font-weight:700}
+  header h1{font-size:2.5rem;font-weight:900;margin:12px 0}
+  header h1 span{color:#39ff14;font-family:'JetBrains Mono',monospace}
+  header .sub{color:#b8d8c6;font-size:1.1rem}
+  .badge-row{display:flex;gap:12px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+  .badge{background:rgba(0,212,170,.12);border:1px solid var(--accent);color:var(--accent);
+    padding:6px 18px;border-radius:50px;font-size:.85rem;font-weight:600}
+  .badge.orange{border-color:var(--accent2);color:var(--accent2);background:rgba(255,107,53,.1)}
+  .badge.matrix{border-color:#39ff14;color:#39ff14;background:rgba(57,255,20,.08)}
+  .badge.purple{border-color:var(--purple);color:var(--purple);background:rgba(139,92,246,.12)}
+
+  /* ===== Sections ===== */
+  section{margin:36px 0}
+  h2{font-size:1.7rem;font-weight:900;margin-bottom:18px;display:flex;align-items:center;gap:12px}
+  h2 .num{background:#39ff14;color:#000;min-width:42px;height:42px;border-radius:12px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:900}
+  h3{color:var(--accent);font-size:1.2rem;margin:16px 0 8px}
+
+  .card{background:var(--card);border:1px solid #30363d;border-radius:16px;padding:24px;margin-bottom:18px}
+  .card.orange{border-right:4px solid var(--accent2)}
+  .card.green{border-right:4px solid var(--accent)}
+  .card.yellow{border-right:4px solid var(--warn)}
+  .card.purple{border-right:4px solid var(--purple)}
+  .card.matrix{border-right:4px solid #39ff14}
+
+  /* ===== Terminal ===== */
+  .terminal{background:#0a0e14;border:1px solid #30363d;border-radius:12px;overflow:hidden;margin:16px 0}
+  .term-bar{background:#21262d;padding:8px 16px;display:flex;gap:8px;align-items:center}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .red{background:#ff5f56}.yel{background:#ffbd2e}.grn{background:#27c93f}
+  .term-title{color:var(--muted);font-size:.8rem;margin-right:10px;font-family:'JetBrains Mono',monospace}
+  .term-body{padding:18px;font-family:'JetBrains Mono',monospace;font-size:.9rem;direction:ltr;text-align:left}
+  .prompt{color:#27c93f}
+  .cmd{color:#e6edf3}
+  .comment{color:#8b949e}
+  .output{color:#79c0ff}
+  .error{color:#ff7b72}
+  .flag{color:#ffd60a}
+  .term-body .line{margin-bottom:6px}
+
+  /* ===== Tables ===== */
+  table{width:100%;border-collapse:collapse;margin:14px 0}
+  th{background:var(--card2);color:#39ff14;padding:12px;font-size:.95rem}
+  td{padding:11px 14px;border-bottom:1px solid #30363d;font-size:.93rem}
+  tr:hover td{background:rgba(57,255,20,.05)}
+  code.inline{background:#21262d;color:var(--accent);padding:2px 8px;border-radius:6px;
+    font-family:'JetBrains Mono',monospace;font-size:.85rem;direction:ltr;display:inline-block}
+
+  /* ===== Callouts ===== */
+  .callout{border-radius:12px;padding:18px 20px;margin:16px 0;display:flex;gap:14px;align-items:flex-start}
+  .callout .icon{font-size:1.6rem}
+  .callout.warn{background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.4)}
+  .callout.info{background:rgba(77,163,255,.08);border:1px solid rgba(77,163,255,.4)}
+  .callout.success{background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.4)}
+  .callout.danger{background:rgba(255,95,86,.08);border:1px solid rgba(255,95,86,.4)}
+
+  /* ===== Objectives ===== */
+  .objectives{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+  .obj{background:var(--card2);border-radius:12px;padding:18px;text-align:center;border-top:3px solid #39ff14}
+  .obj .emoji{font-size:2rem}
+  .obj p{font-size:.9rem;margin-top:8px}
+
+  /* ===== Port Cards ===== */
+  .ports{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:16px 0}
+  .port{background:var(--card2);border-radius:12px;padding:16px;text-align:center;border:1px solid #30363d;transition:.3s}
+  .port:hover{transform:translateY(-4px);border-color:#39ff14}
+  .port .num{font-family:'JetBrains Mono',monospace;font-size:1.8rem;font-weight:700;color:#39ff14;direction:ltr}
+  .port .svc{font-weight:900}
+  .port .desc{font-size:.8rem;color:var(--muted)}
+  .port .emoji{font-size:1.6rem}
+
+  /* ===== Nmap Flags ===== */
+  .flags{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0}
+  .flag-card{background:var(--card2);border-radius:10px;padding:14px;border-right:3px solid var(--warn)}
+  .flag-card code{font-family:'JetBrains Mono',monospace;color:var(--warn);font-size:1rem;direction:ltr;display:block;text-align:left}
+  .flag-card p{font-size:.85rem;margin-top:6px}
+
+  /* ===== Analogy ===== */
+  .analogy{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:16px 0}
+  .an{background:var(--card2);border-radius:12px;padding:18px;border:1px dashed #30363d}
+  .an .icon{font-size:2rem}
+  .an h4{color:#39ff14;margin:8px 0 6px}
+  .an p{font-size:.9rem;color:var(--muted)}
+
+  /* ===== Steps ===== */
+  .step{display:flex;gap:16px;margin-bottom:18px;align-items:flex-start}
+  .step .n{background:var(--purple);color:#fff;min-width:36px;height:36px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-weight:900}
+  .step .content h4{color:var(--accent2)}
+  .step .content p{font-size:.95rem;color:var(--muted)}
+
+  /* ===== Quiz ===== */
+  .quiz{background:var(--card2);border-radius:12px;padding:18px;margin:14px 0;
+    border:1px solid #30363d;transition:.3s}
+  .quiz:hover{border-color:var(--accent)}
+  .quiz .q{font-weight:700}
+  .quiz .options{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .quiz button{background:#21262d;border:1px solid #30363d;color:var(--text);padding:8px 20px;
+    border-radius:8px;cursor:pointer;font-family:'Cairo';font-size:.9rem;transition:.3s}
+  .quiz button:hover{border-color:var(--accent);color:var(--accent)}
+  .quiz button.correct{background:rgba(0,212,170,.2);border-color:var(--accent);color:var(--accent)}
+  .quiz button.wrong{background:rgba(255,95,86,.2);border-color:#ff5f56;color:#ff7b72}
+  .quiz .feedback{margin-top:10px;font-size:.9rem;display:none}
+
+  /* ===== Recap ===== */
+  .recap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+  .recap{background:var(--card2);border-radius:12px;padding:16px;border-right:3px solid #39ff14}
+  .recap b{color:#39ff14}
+
+  /* ===== Game ===== */
+  .game{background:linear-gradient(135deg,#0a1f0a 0%,#12330f 100%);border:1px solid #39ff14;
+    border-radius:16px;padding:26px;margin:20px 0}
+
+  /* ===== States Visual ===== */
+  .states{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+  .state{border-radius:12px;padding:14px 20px;text-align:center;min-width:150px}
+  .state .st{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1rem;direction:ltr}
+  .state.open{background:rgba(57,255,20,.1);border:2px solid #39ff14}
+  .state.open .st{color:#39ff14}
+  .state.closed{background:rgba(255,95,86,.1);border:2px solid #ff5f56}
+  .state.closed .st{color:#ff7b72}
+  .state.filtered{background:rgba(255,214,10,.1);border:2px solid var(--warn)}
+  .state.filtered .st{color:var(--warn)}
+  .state p{font-size:.8rem;color:var(--muted);margin-top:4px}
+
+  footer{text-align:center;padding:30px;color:var(--muted);border-top:1px solid #30363d;margin-top:40px}
+  footer .brand{color:var(--accent);font-weight:900}
+</style>
+</head>
+<body>
+
+<!-- شريط تقدم الكورس -->
+<div class="progress-bar">
+  <div class="pb done"><span>L1: Terminal ✓</span></div>
+  <div class="pb done"><span>L2: الصلاحيات ✓</span></div>
+  <div class="pb done"><span>L3: الشبكات ✓</span></div>
+  <div class="pb current"><span>L4: Nmap ← أنت هنا</span></div>
+  <div class="pb"><span>L5: Wireshark</span></div>
+  <div class="pb"><span>L6: كلمات السر</span></div>
+  <div class="pb"><span>L7: المشروع 🏆</span></div>
+</div>
+
+<header>
+  <div class="logo">☀️ SUNSHINE T ACADEMY — LEVEL 3</div>
+  <h1>المحاضرة 4: <span>Nmap</span> — عين المحلل الأمني 🐉</h1>
+  <div class="sub">نفس الأداة اللي عرفناها على Windows... بقوة Terminal الكاملة — مسح الشبكات كالمحترفين</div>
+  <div class="badge-row">
+    <div class="badge">⏱️ 120 دقيقة</div>
+    <div class="badge orange">👥 أعمار 12–15</div>
+    <div class="badge matrix">🟢 Lab معزول 100%</div>
+    <div class="badge purple">🕵️ فيها لعبة تحقيق!</div>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- ========== أهداف المحاضرة ========== -->
+<section>
+  <h2><span class="num">🎯</span> أهداف المحاضرة</h2>
+  <div class="objectives">
+    <div class="obj"><div class="emoji">📡</div><p>يشرح فرق فحص الشبكة بالـ ping اليدوي وبالـ <code class="inline">nmap -sn</code></p></div>
+    <div class="obj"><div class="emoji">🚪</div><p>يفهم معنى المنافذ (Ports) وحالاتها الثلاثة</p></div>
+    <div class="obj"><div class="emoji">🔍</div><p>يستخدم <code class="inline">-sV</code> و <code class="inline">-O</code> لجمع معلومات عن الأهداف</p></div>
+    <div class="obj"><div class="emoji">📄</div><p>يحفظ نتائج الفحص في تقرير احترافي بـ <code class="inline">-oN</code></p></div>
+  </div>
+</section>
+
+<!-- ========== 1: افتتاحية ========== -->
+<section>
+  <h2><span class="num">1</span> افتتاحية: من الـ ping اليدوي للسكوت الذكي 😎</h2>
+  <div class="card matrix">
+    <p>افتكروا المحاضرة اللي فاتت؟ في تمرين رسم خريطة الشبكة، كنا بعمل <code class="inline">ping</code> لعنوان عنوان عشان نكتشف الأجهزة... <b>تعبنا، صح؟</b> 😅</p>
+    <p style="margin-top:10px">تخيلوا شبكة فيها <b>254 جهازًا</b> — هنحتاج 254 أمر ping باليد! أما مع Nmap:</p>
+    <div class="terminal"><div class="term-bar"><div class="dot red"></div><div class="dot yel"></div><div class="dot grn"></div><span class="term-title">الفرق بين البطل والمستخدم العادي</span></div>
+      <div class="term-body">
+        <div class="line"><span class="comment"># الطريقة اليدوية (المحاضرة اللي فاتت):</span></div>
+        <div class="line"><span class="prompt">$</span> <span class="cmd">ping 192.168.1.1</span></div>
+        <div class="line"><span class="prompt">$</span> <span class="cmd">ping 192.168.1.2</span></div>
+        <div class="line"><span class="comment">... × 252 مرة 😴</span></div>
+        <div class="line"></div>
+        <div class="line"><span class="comment"># طريقة المحترفين:</span></div>
+        <div class="line"><span class="prompt">$</span> <span class="cmd">nmap -sn 192.168.1.0/24</span></div>
+        <div class="line"><span class="output">← الشبكة كلها في ثواني ⚡</span></div>
+      </div>
+    </div>
+    <p>💡 <b>الدرس الأهم:</b> Nmap مش "سحر" — هو بعمل نفس حاجات الـ ping اللي اتعلموها، بس <b>بسرعة وذكاء وتوازي</b>. عشان كده اتعلمنا الأساس الأول!</p>
+  </div>
+</section>
+
+<!-- ========== 2: المنافذ ========== -->
+<section>
+  <h2><span class="num">2</span> المنافذ (Ports) — أبواب المبنى 🚪</h2>
+
+  <div class="card">
+    <p>تخيل إن كل جهاز على الشبكة <b>مبنى كبير</b> 🏢، وعنوان IP هو عنوان المبنى. طيب المبنى فيه <b>آلاف الأبواب</b> — كل باب داخله خدمة مختلفة:</p>
+    <div class="ports">
+      <div class="port"><div class="num">:80</div><div class="svc">HTTP 🌐</div><div class="desc">مواقع الإنترنت (غير مشفرة)</div></div>
+      <div class="port"><div class="num">:443</div><div class="svc">HTTPS 🔒</div><div class="desc">المواقع المشفرة</div></div>
+      <div class="port"><div class="num">:22</div><div class="svc">SSH 🖥️</div><div class="desc">التحكم عن بُعد في Linux</div></div>
+      <div class="port"><div class="num">:21</div><div class="svc">FTP 📁</div><div class="desc">نقل الملفات (قديم وخطير!)</div></div>
+      <div class="port"><div class="num">:3389</div><div class="svc">RDP 🪟</div><div class="desc">سطح مكتب Windows عن بُعد</div></div>
+      <div class="port"><div class="num">:53</div><div class="svc">DNS 📖</div><div class="desc">ترجمة الأسماء لعناوين</div></div>
+    </div>
+    <p>💡 في المبنى فيه <b>65,535 باب</b> (منفذ) — وكل خدمة بتفضل تسمع على بابها. لو باب مفتوح على خدمة قديمة أو مؤمنة غلط... <b>ده مدخل الهجوم!</b> ولية ده أهم مفهوم في اختبار الاختراق.</p>
+  </div>
+
+  <h3>🚦 حالات المنفذ الثلاثة — إزاي Nmap بيشوفهم</h3>
+  <div class="states">
+    <div class="state open"><div class="st">open</div><p>الباب مفتوح وفيه خدمة شغالة — ده المطلوب نعرفه! 🟢</p></div>
+    <div class="state closed"><div class="st">closed</div><p>الباب مقفول — مفيش خدمة سماعة عليه 🔴</p></div>
+    <div class="state filtered"><div class="st">filtered</div><p>جدار حماية بيمنع الوصول — مش عارفين لو مفتوح ولا لأ 🟡</p></div>
+  </div>
+
+  <div class="callout info">
+    <div class="icon">🎓</div>
+    <div><b>مصطلحات النهاردة:</b><br>
+    <code class="inline">Port Scanning</code> = فحص المنافذ |
+    <code class="inline">Service Detection</code> = اكتشاف الخدمات |
+    <code class="inline">Banner</code> = البطاقة التعريفية اللي بيرد بيها الخدمة (فيها الإصدار!)</div>
+  </div>
+</section>
+
+<!-- ========== 3: القاعدة الذهبية ========== -->
+<section>
+  <h2><span class="num">3</span> ⚖️ القاعدة الذهبية — قبل أي أمر</h2>
+  <div class="callout danger">
+    <div class="icon">🚨</div>
+    <div><b>أهم جزء في المحاضرة كلها — اقرأه مرتين:</b><br>
+    Nmap أداة <b>فحص نشط</b> — يعني بتبعت حزم حقيقية للهدف، والهدف <b>بيشوفك</b> ويعرف إنك بتفحصه. علشان كده القانون في كل البلاد واضح:<br><br>
+    ✅ <b>مسموح:</b> فحص أجهزتك أنت + أجهزة اللاب المعزولة (الـ VMs بتوعنا)<br>
+    🚫 <b>ممنوع:</b> فحص أي جهاز أو موقع أو شبكة من غير <b>إذن مكتوب</b> — حتى لو "بس بسأل ألوان"!<br><br>
+    الفرق بين الاثنين؟ الأول مهنة اسمها <b>Ethical Hacker</b> والتاني... ملف قضية 👮‍♂️<br>
+    <b>كل تمرين النهاردة داخل عالم VirtualBox المعزول — مفيش أي خروج للإنترنت.</b></div>
+  </div>
+  <div class="callout info">
+    <div class="icon">💼</div>
+    <div><b>معلومة سوق الشغل:</b> أي شركة اختبارات اختراق حقيقية بتوقع مع العميل <b>ورق تفويض (Scope & Authorization)</b> قبل لمس أي جهاز. المحترف بيفحص <b>اللي مسموح له بيه بس</b> — دي أول قاعدة في الـ CEH و OSCP.</div>
+  </div>
+</section>
+
+<!-- ========== 4: الأوامر ========== -->
+<section>
+  <h2><span class="num">4</span> 💻 أدوات النهاردة — أوامر Nmap خطوة بخطوة</h2>
+
+  <div class="card">
+    <h3>1️⃣ <code class="inline">nmap -sn</code> — "مين حي هنا؟" 📡</h3>
+    <div class="terminal"><div class="term-bar"><div class="dot red"></div><div class="dot yel"></div><div class="dot grn"></div><span class="term-title">kali@sunshine — Host Discovery</span></div>
+      <div class="term-body">
+        <div class="line"><span class="prompt">kali@sunshine:~$</span> <span class="cmd">nmap -sn 192.168.10.0/24</span></div>
+        <div class="line"><span class="output">Starting Nmap 7.94 ( https://nmap.org )</span></div>
+        <div class="line"><span class="output">Nmap scan report for 192.168.10.1</span></div>
+        <div class="line"><span class="output">Host is up (0.0012s latency).</span></div>
+        <div class="line"><span class="output">Nmap scan report for 192.168.10.50</span></div>
+        <div class="line"><span class="output">Host is up (0.0045s latency).</span></div>
+        <div class="line"><span class="output">Nmap done: 256 IP addresses (2 hosts up) scanned in 2.31 seconds</span></div>
+      </div>
+    </div>
+    <p>🔎 <b>التفسير:</b> <code class="inline">-sn</code> = "سأل بس، ما تدخلش الأبواب" — بيسأل كل العناوين الـ 256: "في حد؟" — والنتيجة: جهازين حيين بس. الـ <code class="inline">latency</code> = زمن الرد (نفس time بتاع ping!)</p>
+  </div>
+
+  <div class="card">
+    <h3>2️⃣ <code class="inline">nmap IP</code> — "الأبواب بتاعت واحد فيهم إيه؟" 🚪</h3>
+    <div class="terminal"><div class="term-bar"><div class="dot red"></div><div class="dot yel"></div><div class="dot grn"></div><span class="term-title">kali@sunshine — Port Scan</span></div>
+      <div class="term-body">
+        <div class="line"><span class="prompt">kali@sunshine:~$</span> <span class="cmd">nmap 192.168.10.50</span></div>
+        <div class="line"><span class="output">PORT     STATE  SERVICE</span></div>
+        <div class="line"><span class="output">21/tcp   open   ftp</span></div>
+        <div class="line"><span class="output">22/tcp   open   ssh</span></div>
+        <div class="line"><span class="output">80/tcp   open   http</span></div>
+        <div class="line"><span class="output">3389/tcp closed ms-wbt-server</span></div>
+      </div>
+    </div>
+    <p>🔎 <b>التفسير:</b> الجهاز ده عنده 3 أبواب مفتوحة (FTP, SSH, HTTP) وباب واحد مقفول. المحلل الأمني هنا بيسأل: <b>ليه خالص مفتوح FTP؟ ده بروتوكول قديم مشفر أبدًا!</b> 🤔</p>
+  </div>
+
+  <div class="card">
+    <h3>3️⃣ <code class="inline">nmap -sV</code> — "أنهي إصدار من الخدمة ده؟" 🔍</h3>
+    <div class="terminal"><div class="term-bar"><div class="dot red"></div><div class="dot yel"></div><div class="dot grn"></div><span class="term-title">kali@sunshine — Version Detection</span></div>
+      <div class="term-body">
+        <div class="line"><span class="prompt">kali@sunshine:~$</span> <span class="cmd">nmap -sV 192.168.10.50</span></div>
+        <div class="line"><span class="output">PORT     STATE  SERVICE    VERSION</span></div>
+        <div class="line"><span class="output">21/tcp   open   ftp        vsftpd 2.3.4</span></div>
+        <div class="line"><span class="output">22/tcp   open   ssh        OpenSSH 8.4p1</span></div>
+        <div class="line"><span class="output">80/tcp   open   http        nginx 1.18.0</span></div>
+      </div>
+    </div>
+    <div class="callout warn">
+      <div class="icon">💡</div>
+      <div><b>لحظة "آها!" للطلبة:</b> اكتشفنا إن الـ FTP هو <code class="inline">vsftpd 2.3.4</code> — لو بحثنا في Google عن "vsftpd 2.3.4 vulnerability" هنلاقي إن الإصدار ده <b>فيه ثغرة مشهورة!</b><br>
+      دي أهم فكرة في اختبار الاختراق كلها: <b>الإصدار القديم = ثغرات معروفة</b>. المحلل بيجمع المعلومة دي ويدوّنها في التقرير، وبيوصي بتحديث الخدمة. <b>من غير ما يهجم على حاجة!</b></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>4️⃣ <code class="inline">nmap -O</code> — "نظام التشغيل إيه؟" 🧠</h3>
+    <div class="terminal"><div class="term-bar"><div class="dot red"></div><div class="dot yel"></div><div class="dot grn"></div><span class="term-title">kali@sunshine — OS Detection</span></div>
+      <div class="term-body">
+        <div class="line"><span class="prompt">kali@sunshine:~$</span> <span class="cmd">sudo nmap -O 192.168.10.50</span></div>
+        <div class="line"><span class="output">Device type: general purpose</span></div>
+        <div class="line"><span class="output">Running: Linux 3.X</span></div>
+        <div class="line"><span class="comment"># لاحظوا sudo! فحص نظام التشغيل محتاج صلاحيات أعلى — افتكروا المحاضرة 2 😉</span></div>
+      </div>
+    </div>
+    <p>💡 <b>إزاي بيخمن؟</b> كل نظام تشغيل بيتبع الحزم بطريقته الخاصة (تشيلات مختلفة في الـ TCP flags و TTL). Nmap بيحط كل الطرق دي في "بصمة" (Fingerprint) ويقارنها بقاعدة بيانات ضخمة. <b>زي البصمة في Crime Scene Investigation!</b> 🕵️</p>
+  </div>
+
+  <div class="card">
+    <h3>5️⃣ <code class="inline">-oN</code> — احفظ التقرير زي المحترفين 📄</h3>
+    <div class="terminal"><div class="term-bar"><div class="dot red"></div><div class="dot yel"></div><div class="dot grn"></div><span class="term-title">kali@sunshine — Output to File</span></div>
+      <div class="term-body">
+        <div class="line"><span class="prompt">kali@sunshine:~$</span> <span class="cmd">nmap -sV 192.168.10.0/24 -oN lab_scan.txt</span></div>
+        <div class="line"><span class="comment"># -oN = Output Normal → كل النتيجة بتتحفظ في ملف نصي</span></div>
+        <div class="line"><span class="prompt">kali@sunshine:~$</span> <span class="cmd">cat lab_scan.txt</span></div>
+        <div class="line"><span class="output">...تقرير كامل جاهز للعرض على المدير! 📊</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>🧰 ملخص الأعلام (Flags) — تثبيت المحتوى</h3>
+  <div class="flags">
+    <div class="flag-card"><code>-sn</code><p>اكتشاف الأجهزة الحية بس — "مين موجود؟"</p></div>
+    <div class="flag-card"><code>-sV</code><p>معرفة الخدمات والإصدارات — "بيشتغلوا بنسخة إيه؟"</p></div>
+    <div class="flag-card"><code>-O</code><p>تخمين نظام التشغيل (محتاج sudo)</p></div>
+    <div class="flag-card"><code>-p 1-1000</code><p>فحص منافذ محددة أو نطاق منها</p></div>
+    <div class="flag-card"><code>-oN file.txt</code><p>حفظ النتيجة في تقرير نصي</p></div>
+    <div class="flag-card"><code>-v</code><p>عرض تفاصيل أكتر أثناء الفحص (verbose)</p></div>
+  </div>
+</section>
+
+<!-- ========== 5: اللعبة ========== -->
+<section>
+  <h2><span class="num">5</span> 🕵️ لعبة اليوم: «مين هو الجهاز؟» — تحقيق استخباراتي</h2>
+
+  <div class="game">
+    <h3>🏴 السيناريو</h3>
+    <p>المدرّس شغّل <b>3 أجهزة هدف (Targets)</b> في الشبكة المعزولة — كل واحد فيهم شخصية مجهولة:</p>
+    <div class="analogy" style="margin:14px 0">
+      <div class="an"><div class="icon">🎯</div><h4>الجهاز A</h4><p>مجهول تمامًا — مهمتكم اكتشفوا شخصيته!</p></div>
+      <div class="an"><div class="icon">🎯</div><h4>الجهاز B</h4><p>مجهول — استخدموا كل مهاراتكم</p></div>
+      <div class="an"><div class="icon">🎯</div><h4>الجهاز C</h4><p>مجهول — الأصعب على الإطلاق!</p></div>
+    </div>
+    <p>مثلاً: واحد فيهم <b>ويب سيرفر</b>، وواحد <b>راوتر</b>، وواحد <b>جهاز Linux عنده SSH</b> — إنتوا اكتشفوا!</p>
+    <div class="step" style="margin-top:14px"><div class="n">1</div><div class="content"><h4>اكتشفوا مين حي</h4><p><code class="inline">nmap -sn 192.168.10.0/24</code> — سجّلوا العناوين اللي ردت</p></div></div>
+    <div class="step"><div class="n">2</div><div class="content"><h4>افحصوا الأبواب</h4><p><code class="inline">nmap</code> على كل هدف — المنافذ المفتوحة هتلمحكم للشخصية</p></div></div>
+    <div class="step"><div class="n">3</div><div class="content"><h4>أكّدوا بالتفاصيل</h4><p><code class="inline">sudo nmap -sV -O</code> — الإصدار ونظام التشغيل هيكشفوا الحقيقة</p></div></div>
+    <div class="step"><div class="n">4</div><div class="content"><h4>قدّموا الادعاء 🏛️</h4><p>اكتبوا في الورقة: "الجهاز A = [الشخصية]" + <b>سبب الاستنتاج</b> (أهم جزء!) — والفريق الأدق يفوز</p></div></div>
+    <p style="margin-top:14px;color:#39ff14"><b>🏆 لقب النهاردة: "Digital Detective" (المحقق الرقمي)!</b></p>
+  </div>
+
+  <div class="callout info">
+    <div class="icon">🎯</div>
+    <div><b>الدرس الأعمق من اللعبة:</b> ده اسمه <b>Fingerprinting</b> — جمع بصمة الهدف من معلومات صغيرة متفرقة. نفس المهارة دي بالظبط بيستخدمها الهاكر الأخلاقي والمحلل الأمني والمحقق الجنائي الرقمي. انتوا اتعلمتوها وهي لسا لعبة! 😉</div>
+  </div>
+</section>
+
+<!-- ========== 6: التمارين ========== -->
+<section>
+  <h2><span class="num">🛠️</span> التمرين الرئيسي — تقرير الفحص الأمني 📋 (45 دقيقة)</h2>
+
+  <div class="card green">
+    <h3>🎯 السيناريو: أول Missions حقيقية لكم كفريق أمني</h3>
+    <p>"شركة Sunshine Test Lab قعدت تستأجر فريقكم لعمل <b>Security Assessment</b> لشبكتها المعزولة (النطاق المسموح: <code class="inline">192.168.10.0/24</code>). المطلوب تقرير شامل."</p>
+
+    <div class="step" style="margin-top:14px"><div class="n">1</div><div class="content"><h4>حصر الأصول (Asset Discovery)</h4><p><code class="inline">nmap -sn 192.168.10.0/24 -oN 1_hosts.txt</code><br>كم جهاز حي؟ دوّنهم.</p></div></div>
+    <div class="step"><div class="n">2</div><div class="content"><h4>فحص الخدمات (Service Scan)</h4><p><code class="inline">sudo nmap -sV -O 192.168.10.0/24 -oN 2_services.txt</code><br>(هتاخد 2-3 دقايق — وقت مثالي للنقاش!)</p></div></div>
+    <div class="step"><div class="n">3</div><div class="content"><h4>التحليل والاستنتاج</h4><p>لكل جهاز اكتب في ملف <code class="inline">findings.txt</code> (بـ nano):<br>العنوان → المنافذ المفتوحة → الخدمات والإصدارات → ملاحظة أمنية</p></div></div>
+    <div class="step"><div class="n">4</div><div class="content"><h4>التوصيات (Recommendations)</h4><p>اكتب على الأقل تنيين توصية، مثال حقيقي:<br>✅ "الخدمة FTP القديمة على جهاز X — توصية: تعطيلها واستبدالها بـ SFTP"<br>✅ "SSH مفتوح لكل الشبكة — توصية: تقييده بعناوين محددة"</p></div></div>
+  </div>
+
+  <div class="callout success">
+    <div class="icon">📄</div>
+    <div><b>معلومة تشجيعية:</b> التقرير اللي كتبتوه النهاردة هو <b>نفس شكل المُخرَج</b> اللي شركات الـ Pentesting بتسلمه للعملاء وبتتقاضى عليه آلاف الجنيهات! طبعًا نسخة مبسطة، بس <b>نفس الفكرة ونفس البنية</b> — انتوا كتبوا أول تقرير أمني في حياتكم 🎉</div>
+  </div>
+</section>
+
+<!-- ========== 7: كويز ========== -->
+<section>
+  <h2><span class="num">5</span> 🧠 اختبر نفسك — كويز تفاعلي</h2>
+
+  <div class="quiz" id="q1">
+    <div class="q">❓ سؤال 1: المنفذ <code class="inline">22</code> المفتوح معناه غالبًا إن الجهاز فيه...؟</div>
+    <div class="options">
+      <button onclick="ans(this,'q1',false)">ويب سايت 🌐</button>
+      <button onclick="ans(this,'q1',true)">SSH — تحكم عن بُعد 🖥️</button>
+      <button onclick="ans(this,'q1',false)">طباعة 🖨️</button>
+    </div>
+    <div class="feedback" id="f1"></div>
+  </div>
+
+  <div class="quiz" id="q2">
+    <div class="q">❓ سؤال 2: الفرق الأساسي بين <code class="inline">nmap -sn</code> و <code class="inline">nmap</code> العادي؟</div>
+    <div class="options">
+      <button onclick="ans(this,'q2',false)">-sn أسرع لأنه بيفحص كل المنافذ</button>
+      <button onclick="ans(this,'q2',true)">-sn بس بيسأل "مين حي؟" من غير فحص منافذ 📡</button>
+      <button onclick="ans(this,'q2',false)">-sn بيخفي جهازك عن الضحية 🥷</button>
+    </div>
+    <div class="feedback" id="f2"></div>
+  </div>
+
+  <div class="quiz" id="q3">
+    <div class="q">❓ سؤال 3: ليه النتيجة "vsftpd 2.3.4" معلومة ذهبية للمحلل الأمني؟</div>
+    <div class="options">
+      <button onclick="ans(this,'q3',false)">عشان الرقم كبير ويعجب المدير</button>
+      <button onclick="ans(this,'q3',true)">لأن الإصدار القديم ممكن يكون فيه ثغرات معروفة 🔓</button>
+      <button onclick="ans(this,'q3',false)">مفيش فايدة — مجرد معلومة</button>
+    </div>
+    <div class="feedback" id="f3"></div>
+  </div>
+
+  <div class="quiz" id="q4">
+    <div class="q">❓ سؤال 4: صاحبك طلب منك تفحص شبكة جارهم "للمرح" — تعمل إيه؟</div>
+    <div class="options">
+      <button onclick="ans(this,'q4',false)">أفحص، حاجة بسيطة</button>
+      <button onclick="ans(this,'q4',false)">أفحص وأخفي جهازي الأول</button>
+      <button onclick="ans(this,'q4',true)">أرفض — من غير إذن مكتوب مفيش فحص! ⚖️</button>
+    </div>
+    <div class="feedback" id="f4"></div>
+  </div>
+</section>
+
+<!-- ========== الخلاصة ========== -->
+<section>
+  <h2><span class="num">📌</span> خلاصة المحاضرة + الواجب</h2>
+
+  <div class="recap-grid">
+    <div class="recap"><b>📡 nmap -sn</b> — اكتشاف الأجهزة الحية في الشبكة كلها بأمر واحد</div>
+    <div class="recap"><b>🚪 المنافذ</b> — أبواب المبنى: open / closed / filtered</div>
+    <div class="recap"><b>🔍 -sV</b> — الخدمات والإصدارات: الإصدار القديم = ثغرة محتملة</div>
+    <div class="recap"><b>🧠 -O</b> — بصمة نظام التشغيل (محتاج sudo!)</div>
+    <div class="recap"><b>📄 -oN</b> — تقرير مكتوب — عادة المحترفين من أول يوم</div>
+    <div class="recap"><b>⚖️ الإذن</b> — فحص اللي مسموحلك بيه بس — القانون قبل الأداة</div>
+  </div>
+
+  <div class="card purple">
+    <h3>📝 الواجب المنزلي</h3>
+    <ol style="margin:8px 24px">
+      <li>سلّم تقرير الفحص (الملفات الثلاثة: hosts + services + findings) — منسق ونظيف</li>
+      <li>في ملف <code class="inline">homework4.txt</code>: اشرح بكلامك الفرق بين <code class="inline">open</code> و <code class="inline">filtered</code> وليه الـ Firewall بيرجع حالة تالتة أصلاً</li>
+      <li>❓ <b>سؤال التفكير:</b> لو الجهاز "بيدّيping" لكن <code class="inline">nmap -sn</code> ما لقاهوش — إيه الاحتمالات؟ (تلميح: الجدار الناري بيمنع الـ ICMP... ابحث عن "nmap ping blocked")</li>
+      <li>🎁 <b>اختياري للباحثين:</b> شغّل <code class="inline">nmap --help</code> وعدّي عليا 3 flags مش شرحناهم النهاردة واكتب مين بيعمل إيه — الفريق اللي يجيب أغرب واحد ياخد نقاط!</li>
+    </ol>
+  </div>
+
+  <div class="callout success">
+    <div class="icon">🔮</div>
+    <div><b>المحاضرة الجاية — أروع درس بصري:</b> <b>Wireshark على Kali!</b> بعد ما اتعلمنا نبعت حزم Nmap وهي بتوصل... النهاردة هنصطادها في الطريق ونفتحها حزمة حزمة، وهنشوف بعينينا <b>كلمة سر بتسافر مكشوفة</b> — الدرس اللي هيخلي الكل يستخدم HTTPS للأبد! 📡</div>
+  </div>
+</section>
+
+<footer>
+  <p>☀️ <span class="brand">Sunshine T Academy</span> — Level 3: Kali Linux Fundamentals</p>
+  <p>Lecture 4 of 7 | المحاضرة الخامسة: Wireshark — تجسس على الحزم (لأغراض تعليمية!) 📡</p>
+</footer>
+
+<script>
+function ans(btn, q, correct){
+  const quiz = document.getElementById(q);
+  quiz.querySelectorAll('button').forEach(b => b.classList.remove('correct','wrong'));
+  btn.classList.add(correct ? 'correct' : 'wrong');
+  const fb = quiz.querySelector('.feedback');
+  fb.style.display = 'block';
+  if(correct){
+    fb.innerHTML = '<span style="color:var(--accent)">✅ إجابة صحيحة! مستوى Digital Detective 👏</span>';
+  } else {
+    fb.innerHTML = '<span style="color:#ff7b72">❌ مش دي! راجع المحتوى فوق وجرب تاني 💪</span>';
+  }
+}
+</script>
+
+</div>
+</body>
+</html>
